@@ -1,0 +1,69 @@
+services:
+  # ===============================
+  # NEXTCLOUD
+  # ===============================
+  nextcloud-db:
+    image: postgres:16-alpine
+    container_name: nexcloud-db
+    restart: unless-stopped
+    volumes:
+      - nextcloud_db:/var/lib/postgresql/data
+    env_file:
+      - ./db/.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - nextcloud-network
+    
+  nextcloud-redis:
+    image: redis:7-alpine
+    container_name: nexcloud-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      - nextcloud-network
+  
+  nextcloud:
+    image: nextcloud:29
+    container_name: nextcloud
+    restart: unless-stopped
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+      nextcloud-redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ${DATA_PATH}:/var/www/html/data
+      - nextcloud_config:/var/www/html/config
+    env_file:
+      - ./.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - nextcloud-network
+
+volumes:
+  nextcloud_db:
+    driver: local
+
+  nextcloud_config:
+    driver: local
+  
+networks:
+  nextcloud-network:
+    driver: bridge
