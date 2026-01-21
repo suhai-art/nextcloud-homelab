@@ -42,7 +42,7 @@ services:
       nextcloud-redis:
         condition: service_healthy
     ports:
-      - "127.0.0.1:8080:80"
+      - "0.0.0.0:8080:80"
     volumes:
       - ${DATA_PATH}:/var/www/html/data
       - nextcloud_config:/var/www/html/config
